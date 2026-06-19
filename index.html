@@ -3,100 +3,73 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Radar FII - Dashboard Automatizado</title>
+    <title>FII Analytics - Radar de Fundos Imobiliários</title>
     <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
 </head>
 <body>
-    <header>
-        <div class="container">
-            <h1>Radar FII 🏢</h1>
-            <p>Análise automatizada diária de Fundos Imobiliários</p>
-        </div>
+    <header class="navbar">
+        <div class="logo">FII Analytics SaaS</div>
+        <nav>
+            <ul>
+                <li><a href="#">Dashboard</a></li>
+                <li><a href="#">Ranking</a></li>
+            </ul>
+        </nav>
     </header>
 
-    <!-- Google AdSense - Top Banner -->
-    <div class="adsense-banner container">
-        <p class="ads-label">Publicidade (Google AdSense)</p>
-        <div class="ad-placeholder">[Banner Horizontal - Insira seu código AdSense aqui]</div>
-    </div>
+    <main class="container">
+        <section class="ad-space top-ad">
+            <p>Espaço para Google AdSense (Banner Horizontal)</p>
+            </section>
 
-    <main class="container layout-grid">
-        <section class="content-section">
-            <div class="section-header">
-                <h2>Ranking de FIIs (Ordenado por Dividend Yield)</h2>
-                <span class="update-badge">Atualização Automática (B3)</span>
-            </div>
-            <div class="table-responsive">
-                <table id="fii-table">
+        <section class="dashboard-header">
+            <h1>Monitoramento de FIIs em Tempo Real</h1>
+            <p>Consolidando dados do mercado, variações de preço e notícias do setor.</p>
+        </section>
+
+        <section class="ranking-section">
+            <h2>Cotações e Desempenho (Atualizado)</h2>
+            <div class="table-container">
+                <table id="rankingTable">
                     <thead>
                         <tr>
-                            <th>Posição</th>
                             <th>Ticker</th>
-                            <th>Setor</th>
-                            <th>Preço Atual</th>
-                            <th>Último Div.</th>
-                            <th>DY Est. (12M)</th>
-                            <th>Tendência</th>
-                            <th>Análise</th>
+                            <th>Nome do Fundo</th>
+                            <th>Cotação Atual</th>
+                            <th>Variação Diária</th>
+                            <th>Ação</th>
                         </tr>
                     </thead>
-                    <tbody id="fii-body">
-                        <tr>
-                            <td colspan="8" class="loading-text">Conectando à API da B3 e compilando métricas... ⏳</td>
-                        </tr>
+                    <tbody id="rankingBody">
+                        <tr><td colspan="5" style="text-align:center;">Carregando dados da API...</td></tr>
                     </tbody>
                 </table>
             </div>
         </section>
 
-        <aside class="sidebar">
-            <div class="market-card">
-                <h3>Resumo do Mercado</h3>
-                <p><strong>Data de Consulta:</strong> <span id="current-date">-</span></p>
-                <p class="market-desc">Este SaaS varre as cotações oficiais e recalcula os rankings em tempo real usando dados direto da bolsa de valores através do token configurado.</p>
-            </div>
+        <div class="content-split">
+            <section class="analysis-section">
+                <h2>Radar do Mercado (Notícias e Perspectivas)</h2>
+                <div id="analysisFeed" class="feed-container">
+                    <p>Buscando atualizações na web...</p>
+                </div>
+            </section>
 
-            <!-- Google AdSense - Sidebar Banner -->
-            <div class="adsense-sidebar">
-                <p class="ads-label">Publicidade (Google AdSense)</p>
-                <div class="ad-placeholder-vertical">[Banner Vertical - Insira seu código AdSense aqui]</div>
-            </div>
-        </aside>
+            <aside class="ad-space sidebar-ad">
+                <p>Espaço para Google AdSense (Banner Lateral)</p>
+                </aside>
+        </div>
     </main>
 
-    <!-- Modal de Análise Fundamentalista Detalhada -->
-    <div id="fii-modal" class="modal">
+    <div id="fiiModal" class="modal">
         <div class="modal-content">
             <span class="close-btn">&times;</span>
-            <div class="modal-header">
-                <h2 id="modal-ticker">TICKER11</h2>
-                <span id="modal-sector" class="sector-badge">Setor</span>
-            </div>
-            
-            <div class="modal-grid">
-                <div class="modal-card metric-card">
-                    <h4>Métricas Financeiras</h4>
-                    <p><strong>Cotação Atual:</strong> <span id="modal-price">R$ 0,00</span></p>
-                    <p><strong>Último Dividendo:</strong> <span id="modal-dividend">R$ 0,00</span></p>
-                    <p><strong>Dividend Yield Est.:</strong> <span id="modal-dy">0,00%</span></p>
-                </div>
-                <div class="modal-card danger-card">
-                    <h4>📉 Motivos de Quedas / Riscos</h4>
-                    <p id="modal-risks">Carregando informações...</p>
-                </div>
-                <div class="modal-card info-card">
-                    <h4>🔮 Perspectivas Futuras</h4>
-                    <p id="modal-future">Carregando perspectivas...</p>
-                </div>
-            </div>
-
-            <div class="modal-full-width">
-                <h4>📑 Análise Crítica Detalhada</h4>
-                <p id="modal-analysis">Carregando análise...</p>
-            </div>
+            <h2 id="modalTicker">Ticker</h2>
+            <div id="modalContent"></div>
         </div>
     </div>
 
-    <script src="script.js"></script>
+    <script src="app.js"></script>
 </body>
 </html>
