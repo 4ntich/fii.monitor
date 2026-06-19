@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Radar FII - Dashboard Automatizado</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>Radar FII 🏢</h1>
+            <p>Análise automatizada diária de Fundos Imobiliários</p>
+        </div>
+    </header>
+
+    <!-- Google AdSense - Top Banner -->
+    <div class="adsense-banner container">
+        <p class="ads-label">Publicidade (Google AdSense)</p>
+        <div class="ad-placeholder">[Banner Horizontal - Insira seu código AdSense aqui]</div>
+    </div>
+
+    <main class="container layout-grid">
+        <section class="content-section">
+            <div class="section-header">
+                <h2>Ranking de FIIs (Ordenado por Dividend Yield)</h2>
+                <span class="update-badge">Atualização Automática (B3)</span>
+            </div>
+            <div class="table-responsive">
+                <table id="fii-table">
+                    <thead>
+                        <tr>
+                            <th>Posição</th>
+                            <th>Ticker</th>
+                            <th>Setor</th>
+                            <th>Preço Atual</th>
+                            <th>Último Div.</th>
+                            <th>DY Est. (12M)</th>
+                            <th>Tendência</th>
+                            <th>Análise</th>
+                        </tr>
+                    </thead>
+                    <tbody id="fii-body">
+                        <tr>
+                            <td colspan="8" class="loading-text">Conectando à API da B3 e compilando métricas... ⏳</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <aside class="sidebar">
+            <div class="market-card">
+                <h3>Resumo do Mercado</h3>
+                <p><strong>Data de Consulta:</strong> <span id="current-date">-</span></p>
+                <p class="market-desc">Este SaaS varre as cotações oficiais e recalcula os rankings em tempo real usando dados direto da bolsa de valores através do token configurado.</p>
+            </div>
+
+            <!-- Google AdSense - Sidebar Banner -->
+            <div class="adsense-sidebar">
+                <p class="ads-label">Publicidade (Google AdSense)</p>
+                <div class="ad-placeholder-vertical">[Banner Vertical - Insira seu código AdSense aqui]</div>
+            </div>
+        </aside>
+    </main>
+
+    <!-- Modal de Análise Fundamentalista Detalhada -->
+    <div id="fii-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn">&times;</span>
+            <div class="modal-header">
+                <h2 id="modal-ticker">TICKER11</h2>
+                <span id="modal-sector" class="sector-badge">Setor</span>
+            </div>
+            
+            <div class="modal-grid">
+                <div class="modal-card metric-card">
+                    <h4>Métricas Financeiras</h4>
+                    <p><strong>Cotação Atual:</strong> <span id="modal-price">R$ 0,00</span></p>
+                    <p><strong>Último Dividendo:</strong> <span id="modal-dividend">R$ 0,00</span></p>
+                    <p><strong>Dividend Yield Est.:</strong> <span id="modal-dy">0,00%</span></p>
+                </div>
+                <div class="modal-card danger-card">
+                    <h4>📉 Motivos de Quedas / Riscos</h4>
+                    <p id="modal-risks">Carregando informações...</p>
+                </div>
+                <div class="modal-card info-card">
+                    <h4>🔮 Perspectivas Futuras</h4>
+                    <p id="modal-future">Carregando perspectivas...</p>
+                </div>
+            </div>
+
+            <div class="modal-full-width">
+                <h4>📑 Análise Crítica Detalhada</h4>
+                <p id="modal-analysis">Carregando análise...</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
