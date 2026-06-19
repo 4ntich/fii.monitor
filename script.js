@@ -1,145 +1,132 @@
-const listaFIIs = ['MXRF11.SA', 'HGLG11.SA', 'KNRI11.SA', 'XPLG11.SA', 'ALZR11.SA', 'VISC11.SA', 'BTLG11.SA'];
+// Configurações e Chave de API
+const API_KEY = 'x2mtCMeDdVjmmb3qHvBLSf';
 
-// Base de dados qualitativa (Análises redigidas por si para o SaaS)
-const fiiQualitativeData = {
-    'MXRF11': { setor: 'Papel (Recebíveis)', motivosQueda: 'Oscilações ligadas a índices (IPCA/IGPM).', perspectiva: 'Altamente estável.', analise: 'O Maxi Renda foca-se em CRIs de boa qualidade e possui excelente liquidez.' },
-    'HGLG11': { setor: 'Logística', motivosQueda: 'Ajustes no mercado após transações de ativos.', perspectiva: 'Excelente.', analise: 'Referência em pavilhões industriais (Triple-A) próximos a São Paulo.' },
-    'KNRI11': { setor: 'Híbrido (Lajes/Logística)', motivosQueda: 'Vacância física pontual em escritórios RJ/SP.', perspectiva: 'Positiva.', analise: 'Fundo conservador com inquilinos de grande porte e resiliência.' },
-    'XPLG11': { setor: 'Logística', motivosQueda: 'Devoluções programadas em módulos pontuais.', perspectiva: 'Positiva.', analise: 'Consolida forte presença geográfica focada em e-commerce moderno.' },
-    'ALZR11': { setor: 'Híbrido', motivosQueda: 'Mínimas flutuações de cota.', perspectiva: 'Altamente Previsível.', analise: 'Imune parcialmente à macroeconomia devido a contratos atípicos.' },
-    'VISC11': { setor: 'Shopping Centers', motivosQueda: 'Ajustes sazonais naturais do consumo varejista.', perspectiva: 'Otimista.', analise: 'Portfólio altamente pulverizado, minimizando riscos operacionais.' },
-    'BTLG11': { setor: 'Logística', motivosQueda: 'Alocação de capital após aquisições.', perspectiva: 'Promissora.', analise: 'Tese de crescimento estrutural forte e cap rates atrativos.' }
-};
+// Lista dos FIIs mais negociados para montar o Ranking
+const FII_LIST = 'MXRF11,HGLG11,KNIP11,BTLG11,HCTR11,VISC11,XPLG11,IRDM11';
 
-document.getElementById('current-date').textContent = new Date().toLocaleDateString('pt-PT');
+// URL da API financeira (exemplo usando estrutura Brapi)
+const API_URL = `https://brapi.dev/api/quote/${FII_LIST}?token=${API_KEY}`;
 
-// Função centralizada com Sistema de Redundância (Proxy Rotativo)
-async function buscarYahooFinance(ticker) {
-    const urlYahoo = `https://query2.finance.yahoo.com/v10/finance/quoteSummary/${ticker}?modules=summaryDetail,price`;
-    
-    // Lista de 3 proxies gratuitos diferentes para evitar bloqueios de AdBlockers
-    const rotasProxy = [
-        `https://corsproxy.io/?${encodeURIComponent(urlYahoo)}`,
-        `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(urlYahoo)}`,
-        `https://api.allorigins.win/raw?url=${encodeURIComponent(urlYahoo)}`
-    ];
+// Inicialização
+document.addEventListener('DOMContentLoaded', () => {
+    fetchFiiData();
+    fetchWebNews();
+    setupModalClose();
+});
 
-    // O código tenta cada rota sequencialmente. Se uma falhar, salta para a próxima.
-    for (let proxy of rotasProxy) {
-        try {
-            const resposta = await fetch(proxy);
-            if (resposta.ok) {
-                // Como usamos as versões 'raw' dos proxies, podemos processar o JSON do Yahoo diretamente
-                return await resposta.json(); 
-            }
-        } catch (erro) {
-            console.warn(`Rota bloqueada: ${proxy}. A tentar a via alternativa...`);
-        }
-    }
-    
-    // Se as 3 rotas falharem, o problema é um bloqueio agressivo no navegador do utilizador.
-    throw new Error("Bloqueio de Rede: O seu navegador (ou extensão de AdBlocker/Antivírus) cortou todas as rotas de acesso. Desative o AdBlock para aceder aos dados da bolsa.");
-}
-
-async function carregarDashboard() {
-    const tbody = document.getElementById('fii-body');
-    tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 40px; font-weight: bold; color: #2563eb;">A estabelecer ligação multicanal (Bypass de CORS)... ⏳</td></tr>';
-
+// 1. Busca os dados reais dos FIIs usando sua Chave de API
+async function fetchFiiData() {
     try {
-        const promessasDeBusca = listaFIIs.map(async (ticker) => {
-            const yahooData = await buscarYahooFinance(ticker);
-
-            if (!yahooData || !yahooData.quoteSummary || !yahooData.quoteSummary.result) {
-                return null;
-            }
-
-            const resultado = yahooData.quoteSummary.result[0];
-            const priceData = resultado.price;
-            const summaryData = resultado.summaryDetail;
-
-            // Limpa a formatação .SA
-            const tickerLimpo = ticker.replace('.SA', '');
-            const dadosQualitativos = fiiQualitativeData[tickerLimpo] || { setor: 'FII', motivosQueda: '-', perspectiva: '-', analise: '-' };
-
-            const precoAtual = priceData.regularMarketPrice?.raw || 0;
-            const variacaoDiaria = priceData.regularMarketChangePercent?.raw || 0;
-            
-            const dyAnual = (summaryData.dividendYield?.raw || summaryData.trailingAnnualDividendYield?.raw || 0) * 100;
-            const dividendoMensal = (summaryData.dividendRate?.raw || 0) / 12;
-
-            let tendencia = 'neutro';
-            if (variacaoDiaria > 0.001) tendencia = 'alta';
-            if (variacaoDiaria < -0.001) tendencia = 'baixa';
-
-            return {
-                ticker: tickerLimpo,
-                setor: dadosQualitativos.setor,
-                preco: precoAtual,
-                dividendo: dividendoMensal,
-                dy: dyAnual,
-                tendencia: tendencia,
-                motivosQueda: dadosQualitativos.motivosQueda,
-                perspectiva: dadosQualitativos.perspectiva,
-                analise: dadosQualitativos.analise
-            };
-        });
-
-        let globalFiiData = await Promise.all(promessasDeBusca);
-        globalFiiData = globalFiiData.filter(fii => fii !== null);
-
-        if (globalFiiData.length === 0) {
-            throw new Error("Não foi possível extrair os pacotes de dados do Yahoo Finance.");
+        const response = await fetch(API_URL);
+        
+        if (!response.ok) {
+            throw new Error(`Erro na API: ${response.status}`);
         }
 
-        // Ordenar os ativos (Melhor DY em primeiro)
-        globalFiiData.sort((a, b) => b.dy - a.dy);
-
-        // Preencher o ecrã com a tabela
-        tbody.innerHTML = '';
-        globalFiiData.forEach((fii, index) => {
-            const tr = document.createElement('tr');
-            let badgeClass = fii.tendencia;
-            let badgeText = fii.tendencia === 'alta' ? 'Em Alta ▲' : fii.tendencia === 'baixa' ? 'Em Queda ▼' : 'Estável ▬';
-
-            tr.innerHTML = `
-                <td><strong>#${index + 1}</strong></td>
-                <td><span style="font-weight: 700; color: var(--secondary-color);">${fii.ticker}</span></td>
-                <td>${fii.setor}</td>
-                <td>R$ ${fii.preco.toFixed(2).replace('.', ',')}</td>
-                <td>R$ ${fii.dividendo.toFixed(4).replace('.', ',')}</td>
-                <td style="font-weight: 700; color: #1e40af; font-size: 1.05rem;">${fii.dy.toFixed(2).replace('.', ',')}%</td>
-                <td><span class="trend-badge ${badgeClass}">${badgeText}</span></td>
-                <td><button class="btn-action" onclick="abrirModal('${fii.ticker}')">Ver Detalhes</button></td>
-            `;
-            tbody.appendChild(tr);
-        });
-
-        // Configurar as lógicas da Janela Modal
-        window.abrirModal = function(ticker) {
-            const fii = globalFiiData.find(f => f.ticker === ticker);
-            if (!fii) return;
-            document.getElementById('modal-ticker').textContent = fii.ticker;
-            document.getElementById('modal-sector').textContent = fii.setor;
-            document.getElementById('modal-price').textContent = `R$ ${fii.preco.toFixed(2).replace('.', ',')}`;
-            document.getElementById('modal-dividend').textContent = `R$ ${fii.dividendo.toFixed(4).replace('.', ',')} (Est. Mensal)`;
-            document.getElementById('modal-dy').textContent = `${fii.dy.toFixed(2).replace('.', ',')}% (Anual)`;
-            document.getElementById('modal-risks').textContent = fii.motivosQueda;
-            document.getElementById('modal-future').textContent = fii.perspectiva;
-            document.getElementById('modal-analysis').textContent = fii.analise;
-            document.getElementById('fii-modal').style.display = 'block';
-        }
-
-        document.querySelector('.close-btn').onclick = () => document.getElementById('fii-modal').style.display = 'none';
-        window.onclick = (e) => { if (e.target === document.getElementById('fii-modal')) document.getElementById('fii-modal').style.display = 'none'; }
+        const data = await response.json();
+        renderRanking(data.results);
 
     } catch (error) {
-        tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--danger); padding: 40px; border: 2px solid red;">
-            <h3 style="margin-bottom: 10px;">Erro de Ligação</h3>
-            <p style="font-size: 1.1rem;"><strong>Detalhe técnico:</strong><br> 
-            <span style="background: #fee2e2; padding: 5px 10px; border-radius: 4px;">${error.message}</span></p>
-            <p style="margin-top: 15px; font-size: 0.9rem; color: #334;">Dica Ouro: O seu navegador está a bloquear as comunicações em segundo plano. Desative extensões de privacidade (AdBlock, etc) neste domínio ou tente aceder em Janela Anónima.</p>
-        </td></tr>`;
+        console.error("Erro ao buscar FIIs:", error);
+        document.getElementById('rankingBody').innerHTML = `
+            <tr><td colspan="5" class="negativo">Erro ao carregar dados. Verifique a API Key ou o limite de requisições.</td></tr>
+        `;
     }
 }
 
-carregarDashboard();
+// 2. Faz a "Consulta na Web" buscando notícias recentes sobre FIIs
+// Como o JS puro não faz web scraping por causa do CORS, usamos uma API pública de RSS para JSON
+async function fetchWebNews() {
+    // RSS do InfoMoney focado em Fundos Imobiliários
+    const rssUrl = 'https://www.infomoney.com.br/onde-investir/fundos-imobiliarios/feed/';
+    const proxyUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rssUrl)}`;
+
+    try {
+        const response = await fetch(proxyUrl);
+        const data = await response.json();
+        
+        if(data.status === 'ok') {
+            renderDropsFeed(data.items.slice(0, 5)); // Pega as 5 notícias mais recentes
+        }
+    } catch (error) {
+        console.error("Erro ao buscar notícias da web:", error);
+        document.getElementById('analysisFeed').innerHTML = '<p>Erro ao carregar o radar do mercado.</p>';
+    }
+}
+
+// Renderiza a Tabela de FIIs
+function renderRanking(fiis) {
+    const tbody = document.getElementById('rankingBody');
+    tbody.innerHTML = '';
+
+    // Ordena do melhor para o pior rendimento diário (Ranking)
+    fiis.sort((a, b) => b.regularMarketChangePercent - a.regularMarketChangePercent);
+
+    fiis.forEach(fii => {
+        const row = document.createElement('tr');
+        
+        // Formata a variação
+        const variacao = fii.regularMarketChangePercent || 0;
+        const variacaoClass = variacao >= 0 ? 'positivo' : 'negativo';
+        const variacaoFormatada = variacao > 0 ? `+${variacao.toFixed(2)}%` : `${variacao.toFixed(2)}%`;
+
+        row.innerHTML = `
+            <td><strong>${fii.symbol}</strong></td>
+            <td>${fii.shortName || 'Fundo Imobiliário'}</td>
+            <td>R$ ${fii.regularMarketPrice.toFixed(2).replace('.', ',')}</td>
+            <td class="${variacaoClass}">${variacaoFormatada}</td>
+            <td>
+                <button class="btn-details" 
+                    onclick="openDetails('${fii.symbol}', '${fii.longName}', ${fii.regularMarketPrice})">
+                    Detalhes
+                </button>
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
+}
+
+// Renderiza o feed de Notícias/Quedas
+function renderDropsFeed(newsItems) {
+    const feedContainer = document.getElementById('analysisFeed');
+    feedContainer.innerHTML = '';
+
+    newsItems.forEach(item => {
+        const card = document.createElement('div');
+        card.className = 'feed-card';
+        // Remove tags HTML indesejadas do resumo
+        let resumo = item.description.replace(/<[^>]*>?/gm, '').substring(0, 150) + '...';
+        
+        card.innerHTML = `
+            <h3>${item.title}</h3>
+            <p style="margin-bottom: 10px; color: var(--text-muted); font-size: 0.9rem;">${resumo}</p>
+            <a href="${item.link}" target="_blank">Ler análise completa na web &rarr;</a>
+        `;
+        feedContainer.appendChild(card);
+    });
+}
+
+// Lógica do Modal
+function openDetails(ticker, nome, preco) {
+    document.getElementById('modalTicker').innerText = `Análise do Fundo: ${ticker}`;
+    document.getElementById('modalContent').innerHTML = `
+        <p><strong>Nome:</strong> ${nome}</p>
+        <p><strong>Cotação Atual:</strong> R$ ${preco.toFixed(2).replace('.', ',')}</p>
+        <br>
+        <p><em>Para calcular o Dividend Yield atualizado, P/VP e perspectivas futuras detalhadas, o sistema requer a versão Premium da API.</em></p>
+    `;
+    
+    document.getElementById('fiiModal').style.display = 'block';
+}
+
+function setupModalClose() {
+    const modal = document.getElementById('fiiModal');
+    const closeBtn = document.querySelector('.close-btn');
+
+    closeBtn.onclick = () => { modal.style.display = "none"; }
+    window.onclick = (event) => {
+        if (event.target == modal) {
+            modal.style.display = "none";
+        }
+    }
+}
