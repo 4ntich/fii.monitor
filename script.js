@@ -1,5 +1,3 @@
-// Removemos a necessidade de API_TOKEN. A API do Yahoo Finance é pública.
-// Adicionamos o sufixo .SA que o Yahoo exige para ativos da bolsa brasileira (B3)
 const listaFIIs = ['MXRF11.SA', 'HGLG11.SA', 'KNRI11.SA', 'XPLG11.SA', 'ALZR11.SA', 'VISC11.SA', 'BTLG11.SA'];
 
 // Base de dados qualitativa (Análises redigidas por si para o SaaS)
@@ -15,44 +13,58 @@ const fiiQualitativeData = {
 
 document.getElementById('current-date').textContent = new Date().toLocaleDateString('pt-PT');
 
+// Função centralizada com Sistema de Redundância (Proxy Rotativo)
+async function buscarYahooFinance(ticker) {
+    const urlYahoo = `https://query2.finance.yahoo.com/v10/finance/quoteSummary/${ticker}?modules=summaryDetail,price`;
+    
+    // Lista de 3 proxies gratuitos diferentes para evitar bloqueios de AdBlockers
+    const rotasProxy = [
+        `https://corsproxy.io/?${encodeURIComponent(urlYahoo)}`,
+        `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(urlYahoo)}`,
+        `https://api.allorigins.win/raw?url=${encodeURIComponent(urlYahoo)}`
+    ];
+
+    // O código tenta cada rota sequencialmente. Se uma falhar, salta para a próxima.
+    for (let proxy of rotasProxy) {
+        try {
+            const resposta = await fetch(proxy);
+            if (resposta.ok) {
+                // Como usamos as versões 'raw' dos proxies, podemos processar o JSON do Yahoo diretamente
+                return await resposta.json(); 
+            }
+        } catch (erro) {
+            console.warn(`Rota bloqueada: ${proxy}. A tentar a via alternativa...`);
+        }
+    }
+    
+    // Se as 3 rotas falharem, o problema é um bloqueio agressivo no navegador do utilizador.
+    throw new Error("Bloqueio de Rede: O seu navegador (ou extensão de AdBlocker/Antivírus) cortou todas as rotas de acesso. Desative o AdBlock para aceder aos dados da bolsa.");
+}
+
 async function carregarDashboard() {
     const tbody = document.getElementById('fii-body');
-    tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 40px; font-weight: bold; color: #2563eb;">A ligar aos servidores do Yahoo Finance... ⏳</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 40px; font-weight: bold; color: #2563eb;">A estabelecer ligação multicanal (Bypass de CORS)... ⏳</td></tr>';
 
     try {
-        // Mapeamos cada FII para uma promessa de busca na API do Yahoo
         const promessasDeBusca = listaFIIs.map(async (ticker) => {
-            // Endpoint do Yahoo que traz resumo detalhado e preço
-            const urlYahoo = `https://query2.finance.yahoo.com/v10/finance/quoteSummary/${ticker}?modules=summaryDetail,price`;
-            
-            // Usamos o proxy público AllOrigins para evitar o bloqueio de CORS do navegador
-            const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(urlYahoo)}`;
+            const yahooData = await buscarYahooFinance(ticker);
 
-            const resposta = await fetch(proxyUrl);
-            if (!resposta.ok) throw new Error(`Falha de rede ao aceder a ${ticker}`);
-
-            const proxyData = await resposta.json();
-            const yahooData = JSON.parse(proxyData.contents); // O proxy devolve os dados reais dentro de "contents"
-
-            if (!yahooData.quoteSummary || !yahooData.quoteSummary.result) {
-                return null; // Ignora se o fundo não for encontrado
+            if (!yahooData || !yahooData.quoteSummary || !yahooData.quoteSummary.result) {
+                return null;
             }
 
             const resultado = yahooData.quoteSummary.result[0];
             const priceData = resultado.price;
             const summaryData = resultado.summaryDetail;
 
-            // Limpa o .SA para mostrar de forma elegante no ecrã (ex: MXRF11)
+            // Limpa a formatação .SA
             const tickerLimpo = ticker.replace('.SA', '');
             const dadosQualitativos = fiiQualitativeData[tickerLimpo] || { setor: 'FII', motivosQueda: '-', perspectiva: '-', analise: '-' };
 
             const precoAtual = priceData.regularMarketPrice?.raw || 0;
             const variacaoDiaria = priceData.regularMarketChangePercent?.raw || 0;
             
-            // O Yahoo devolve o DY em decimal (ex: 0.12 para 12%). Multiplicamos por 100.
             const dyAnual = (summaryData.dividendYield?.raw || summaryData.trailingAnnualDividendYield?.raw || 0) * 100;
-            
-            // O Yahoo fornece a taxa anual de dividendos. Dividimos por 12 para ter uma estimativa mensal.
             const dividendoMensal = (summaryData.dividendRate?.raw || 0) / 12;
 
             let tendencia = 'neutro';
@@ -72,20 +84,17 @@ async function carregarDashboard() {
             };
         });
 
-        // Aguarda que todas as buscas em simultâneo terminem
         let globalFiiData = await Promise.all(promessasDeBusca);
-        
-        // Remove valores nulos (caso a API não encontre algum fundo específico)
         globalFiiData = globalFiiData.filter(fii => fii !== null);
 
         if (globalFiiData.length === 0) {
-            throw new Error("Não foi possível extrair os dados financeiros.");
+            throw new Error("Não foi possível extrair os pacotes de dados do Yahoo Finance.");
         }
 
-        // Ordenar rigorosamente do melhor para o pior Dividend Yield
+        // Ordenar os ativos (Melhor DY em primeiro)
         globalFiiData.sort((a, b) => b.dy - a.dy);
 
-        // Renderizar a Tabela no Ecrã
+        // Preencher o ecrã com a tabela
         tbody.innerHTML = '';
         globalFiiData.forEach((fii, index) => {
             const tr = document.createElement('tr');
@@ -105,7 +114,7 @@ async function carregarDashboard() {
             tbody.appendChild(tr);
         });
 
-        // Configuração da Janela Modal (Análise Separada)
+        // Configurar as lógicas da Janela Modal
         window.abrirModal = function(ticker) {
             const fii = globalFiiData.find(f => f.ticker === ticker);
             if (!fii) return;
@@ -128,6 +137,7 @@ async function carregarDashboard() {
             <h3 style="margin-bottom: 10px;">Erro de Ligação</h3>
             <p style="font-size: 1.1rem;"><strong>Detalhe técnico:</strong><br> 
             <span style="background: #fee2e2; padding: 5px 10px; border-radius: 4px;">${error.message}</span></p>
+            <p style="margin-top: 15px; font-size: 0.9rem; color: #334;">Dica Ouro: O seu navegador está a bloquear as comunicações em segundo plano. Desative extensões de privacidade (AdBlock, etc) neste domínio ou tente aceder em Janela Anónima.</p>
         </td></tr>`;
     }
 }
