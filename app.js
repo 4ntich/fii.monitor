@@ -1,5 +1,5 @@
 // Configurações e Chave de API
-const API_KEY = 'x2mtCMeDdVjmmb3qHvBLSf';
+const API_KEY = '5xBxKpxwz2a6GeZf8upKwY';
 
 // Lista dos FIIs mais negociados para montar o Ranking
 const FII_LIST = 'MXRF11,HGLG11,KNIP11,BTLG11,HCTR11,VISC11,XPLG11,IRDM11';
