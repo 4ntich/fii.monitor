@@ -1,4 +1,4 @@
-const API_TOKEN = '2v6TVtVXCe8Fhoeaj76uBM';
+const API_TOKEN = 'x2mtCMeDdVjmmb3qHvBLSf';
 const listaFIIs = ['MXRF11', 'HGLG11', 'KNRI11', 'XPLG11', 'ALZR11', 'VISC11', 'BTLG11'];
 
 // Banco de dados qualitativo complementar para enriquecer o SaaS conforme as exigências de negócio
